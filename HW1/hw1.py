@@ -609,10 +609,11 @@ import sympy
 
 def generate_new_features(all_features):
     amount_of_features = all_features.shape[1]
+    columns_list = all_features.columns.to_list()
     amount_of_features = 4
     X = all_features.values
     variable_dict = {}
-    vars_string = ' '.join(['%c' % x for x in range(97, 97+amount_of_features)])  # gives 'abcdefghij'
+    vars_string = ' '.join(columns_list)  # gives 'abcdefghij'
     variable = symbols(vars_string)
     for i_var_idx in range(amount_of_features):
         if i_var_idx == 0 :
@@ -632,11 +633,11 @@ def generate_new_features(all_features):
         for i_sample in sample_list:
             new_feature_sample_i_val = i_exp.subs(i_sample) 
             new_feauture_vals.append(new_feature_sample_i_val)
+            i_exp_string = str(i_exp)
+            
         all_features[str(i_exp)] = new_feauture_vals
     return all_features
     
-
-
 columns_to_drop = ['price', 'id', 'date']
 all_features = df.drop(columns=columns_to_drop)
 all_features.head(5)
