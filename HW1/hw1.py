@@ -603,24 +603,49 @@ and evaluate the MSE cost on the training and testing datasets.
 """
 
 
+
+from sympy import expand, symbols
+import sympy
+
+def generate_new_features(all_features):
+    amount_of_features = all_features.shape[1]
+    amount_of_features = 4
+    X = all_features.values
+    variable_dict = {}
+    vars_string = ' '.join(['%c' % x for x in range(97, 97+amount_of_features)])  # gives 'abcdefghij'
+    variable = symbols(vars_string)
+    for i_var_idx in range(amount_of_features):
+        if i_var_idx == 0 :
+            gfg_exp = variable[i_var_idx]
+        else:
+            gfg_exp += variable[i_var_idx]
+    exp = sympy.expand(gfg_exp**2)
+    
+    all_multipicationcombinations = list(exp._args)
+    sample_list = []
+    for i_sample in range(0, X.shape[0]):
+        sample = list(map(lambda x,y: (x,y), variable, X[i_sample].tolist() ))
+        sample_list.append(sample)
+    
+    for i_exp in all_multipicationcombinations:
+        new_feauture_vals = []
+        for i_sample in sample_list:
+            new_feature_sample_i_val = i_exp.subs(i_sample) 
+            new_feauture_vals.append(new_feature_sample_i_val)
+        all_features[str(i_exp)] = new_feauture_vals
+    return all_features
+    
+
+
 columns_to_drop = ['price', 'id', 'date']
 all_features = df.drop(columns=columns_to_drop)
 all_features.head(5)
-from sympy import expand, symbols
+all_features = generate_new_features(all_features)
 
 
-amount_of_features = all_features.shape[1]
-variable_dict = {}
-vars_string = ' '.join(['%c' % x for x in range(97, 97+amount_of_features)])  # gives 'abcdefghij'
-variable = symbols(vars_string)
-for i_var_idx in range(amount_of_features):
-    if i_var_idx == 0 :
-        gfg_exp = variable[i_var_idx]
-    else:
-        
-        gfg_exp += variable[i_var_idx]
 
-exp = sympy.expand(gfg_exp**2)
+
+
 
 
 
