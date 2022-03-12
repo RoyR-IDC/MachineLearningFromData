@@ -33,10 +33,17 @@ Implement the cost function `preprocess`.
 """
 
 def mean_normalization(data):
-    data_mean  = np.mean(data)
-    data_min  = np.min(data)
-    data_max  = np.max(data)
-    data_normelized = (data-data_mean)/(data_max-data_min)
+    data_shape  = data.shape
+    data_normelized = data.copy()
+    if data_shape.size == 1:
+        data_shape.resize((data.size, 1))
+        data_shape = data_shape.shape
+    for i_feature in range (0, data_shape[1]):
+        data_mean  = np.mean(data[:,i_feature])
+        data_min  = np.min(data[:,i_feature])
+        data_max  = np.max(data[:,i_feature])
+        data_normelized[:,i_feature] = (data[:,i_feature]-data_mean)/(data_max-data_min)
+    
     return data_normelized
 
 def std_normalization(data):
@@ -72,7 +79,9 @@ def preprocess(X, y):
     ###########################################################################
     # TODO: Implement the normalization function.                             #
     ###########################################################################
-    pass
+    
+    X = mean_normalization(X)
+    y = mean_normalization(y)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -80,6 +89,18 @@ def preprocess(X, y):
 
 
 X, y = preprocess(X, y)
+###########################################################################
+#                            START OF YOUR CODE                           #
+###########################################################################
+def add_bias_to_X(X):
+    one_columns  = np.ones((X.shape[0],1))
+    X = np.concatenate((one_columns, X), axis = 1)
+    return X
+X =  add_bias_to_X(X)
+###########################################################################
+#                             END OF YOUR CODE                            #
+###########################################################################
+
 
 # training and validation split
 np.random.seed(42)
@@ -96,23 +117,20 @@ plt.show()
 """
 ## Bias Trick
 
-Make sure that `X` takes into consideration the bias $\theta_0$ in the linear model. Hint, recall that the predications of our linear model are of the form:
+Make sure that 
+`X` takes into consideration the bias $\theta_0$ in the linear model.
+ Hint, recall that the predications of our linear model are of the form
 
 $$
 \hat{y} = h_\theta(x) = \theta^T x = \theta_0 + \theta_1 x_1
 $$
 
-Add columns of ones as the zeroth column of the features (do this for both the training and validation sets).
+Add columns of ones as the zeroth column of the features 
+(do this for both the training and validation sets).
 
 """
 
-###########################################################################
-#                            START OF YOUR CODE                           #
-###########################################################################
-pass
-###########################################################################
-#                             END OF YOUR CODE                            #
-###########################################################################
+
 
 
 
@@ -173,13 +191,18 @@ def compute_cost(X, y, theta):
     ###########################################################################
     # TODO: Implement the MSE cost function.                                  #
     ###########################################################################
-    pass
+    A = y 
+    
+    B = np.matmul(X, np.transpose(theta))
+    mse = (np.square(A - B)).mean(axis=0)
+    J = (mse/2)[0]
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return J
 
-theta = np.array([-1, 2])
+theta = np.array([[-1, 2]])
 J = compute_cost(X_train, y_train, theta)
 
 def gradient_descent(X, y, theta, alpha, num_iters):
@@ -202,13 +225,23 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     - theta: The learned parameters of your model.
     - J_history: the loss value for every iteration.
     """
-    
-    J_history = [] # Use a python list to save cost in every iteration
-    theta = theta.copy() # avoid changing the original thetas
     ###########################################################################
     # TODO: Implement the gradient descent optimization algorithm.            #
     ###########################################################################
-    pass
+    theta = theta.reshape((1,theta.size))
+    J_history = [] # Use a python list to save cost in every iteration
+    theta = theta.copy() # avoid changing the original thetas
+    sample_size = y.size
+    # this loop run on iterations
+    for i_iteration in range(0, num_iters):
+       error_vec = (np.matmul(theta,np.transpose(X)) - np.transpose(y)) # 1Xsample_size
+       sumation = np.matmul(error_vec,X) # 1Xsample_size X sample_sizeX2 = 1X2
+       new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       current_J = compute_cost(X_train, y_train, new_theta_vec)
+       J_history.append(current_J)
+       theta = new_theta_vec.copy() # avoid changing the original thetas
+       ########
+    
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -217,10 +250,11 @@ def gradient_descent(X, y, theta, alpha, num_iters):
 
 np.random.seed(42)
 theta = np.random.random(size=2)
-iterations = 40000
+iterations = 10
 alpha = 0.1
 theta, J_history = gradient_descent(X_train ,y_train, theta, alpha, iterations)
 
+plt.figure()
 plt.plot(np.arange(iterations), J_history)
 plt.xscale('log')
 plt.xlabel('Iterations')
@@ -244,11 +278,15 @@ def pinv(X, y):
     ########## DO NOT USE np.linalg.pinv ##############
     """
     
-    pinv_theta = []
     ###########################################################################
     # TODO: Implement the pseudoinverse algorithm.                            #
     ###########################################################################
-    pass
+    X_T = np.transpose(X)
+    X_T_X = np.matmul(X_T, X)
+    inverse_X_T_X = np.linalg.inv(X_T_X)
+    X_T_X_X_T = np.matmul(inverse_X_T_X, X_T)
+    pinv_theta = np.transpose(np.matmul(X_T_X_X_T, y))
+     
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -297,12 +335,23 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     - J_history: the loss value for every iteration.
     """
     
+  
+    ###########################################################################
+    desire_error = 1e-8
+    theta = theta.reshape((1,theta.size))
     J_history = [] # Use a python list to save cost in every iteration
     theta = theta.copy() # avoid changing the original thetas
-    ###########################################################################
-    # TODO: Implement the gradient descent optimization algorithm.            #
-    ###########################################################################
-    pass
+    sample_size = y.size
+    # this loop run on iterations
+    for i_iteration in range(0, num_iters):
+       error_vec = (np.matmul(theta,np.transpose(X)) - np.transpose(y)) # 1Xsample_size
+       sumation = np.matmul(error_vec,X) # 1Xsample_size X sample_sizeX2 = 1X2
+       new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       current_J = compute_cost(X_train, y_train, new_theta_vec)
+       J_history.append(current_J)
+       theta = new_theta_vec.copy() # avoid changing the original thetas
+       if desire_error > current_J:
+           break
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -333,25 +382,42 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     alphas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
     alpha_dict = {}
     ###########################################################################
-    # TODO: Implement the function.                                           #
-    ###########################################################################
-    pass
+   
+
+    for current_alpha in alphas:
+        initial_theta = np.array([[-1, 2]])
+        suggested_theta, J_history = efficient_gradient_descent(X_train, y_train, initial_theta, current_alpha, iterations)
+        validation_J_for_specific_alphas = compute_cost(X_val, y_val, suggested_theta)
+        alpha_dict[current_alpha] =  validation_J_for_specific_alphas
+        
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return alpha_dict
 
-alpha_dict = find_best_alpha(X_train, y_train, X_val, y_val, 40000)
+alpha_dict = find_best_alpha(X_train, y_train, X_val, y_val, 10)
 
 """
 Obtain the best learning rate from the dictionary `alpha_dict`. This can be done in a single line using built-in functions.
 """
 
-best_alpha = None
 ###########################################################################
 #                            START OF YOUR CODE                           #
 ###########################################################################
-pass
+result = alpha_dict.items()
+  
+# Convert object to a list
+data = list(result)
+  
+# Convert list to an array
+data_array = np.array(data)
+mse_values = data_array[:,1]
+alpha_values = data_array[:,0]
+
+best_alpha_index = np.where(np.min(mse_values) == mse_values)[0]
+best_alpha  = alpha_values[best_alpha_index]
+best_mse  = mse_values[best_alpha_index]
+
 ###########################################################################
 #                             END OF YOUR CODE                            #
 ###########################################################################
@@ -367,7 +433,22 @@ clear and informative. (5 points)
 ###########################################################################
 #                            START OF YOUR CODE                           #
 ###########################################################################
-pass
+amount_of_numbers = 3
+three_best_mse_index = mse_values.argsort()[0:3][::-1]
+best_alphas = np.take(alpha_values, three_best_mse_index)
+desire_amount_of_iterations = 100
+alphas = best_alphas
+alpha_dict = {}
+###########################################################################
+
+
+for current_alpha in alphas:
+    initial_theta = np.array([[-1, 2]])
+    suggested_theta, J_history = efficient_gradient_descent(X_train, y_train, initial_theta, current_alpha, iterations)
+    validation_J_for_specific_alphas = compute_cost(X_val, y_val, suggested_theta)
+    alpha_dict[current_alpha] =  validation_J_for_specific_alphas
+    
+    
 ###########################################################################
 #                             END OF YOUR CODE                            #
 ###########################################################################
@@ -410,7 +491,7 @@ If you wrote vectorized code, this part should be straightforward. If your code 
 """
 
 # Read comma separated data
-df = pd.read_csv('data.csv')
+df = pd.read_csv(path)
 df.head()
 
 """
@@ -458,7 +539,7 @@ Use the bias trick again (add a column of ones as the zeroth column in the both 
 ###########################################################################
 #                            START OF YOUR CODE                           #
 ###########################################################################
-pass
+X =  add_bias_to_X(X)
 ###########################################################################
 #                             END OF YOUR CODE                            #
 ###########################################################################
@@ -525,9 +606,46 @@ and evaluate the MSE cost on the training and testing datasets.
 columns_to_drop = ['price', 'id', 'date']
 all_features = df.drop(columns=columns_to_drop)
 all_features.head(5)
+from sympy import expand, symbols
 
 
-### Your code here ###
+amount_of_features = all_features.shape[1]
+variable_dict = {}
+vars_string = ' '.join(['%c' % x for x in range(97, 97+amount_of_features)])  # gives 'abcdefghij'
+variable = symbols(vars_string)
+for i_var_idx in range(amount_of_features):
+    if i_var_idx == 0 :
+        gfg_exp = variable[i_var_idx]
+    else:
+        
+        gfg_exp += variable[i_var_idx]
+
+exp = sympy.expand(gfg_exp**2)
+
+
+
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 """
 Give an explanations to the results and compare them to regular linear regression. Do they make sense?
