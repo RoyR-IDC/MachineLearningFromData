@@ -624,7 +624,7 @@ def generate_new_features(all_features, power, max_feature_2_add):
 
     array_feature = np.arange(0, amount_of_features)               
     comb_array = np.array(np.meshgrid(array_feature, array_feature)).T.reshape(-1, 2)
-    comb_array2 = comb_array[::5,:]
+    comb_array2 = comb_array
     amount_of_new_features = comb_array2.shape[0]
     option1 = np.take(X, comb_array2[:,0], axis = 1)
     option2 = np.take(X, comb_array2[:,1], axis = 1)
