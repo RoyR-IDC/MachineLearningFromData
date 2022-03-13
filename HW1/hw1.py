@@ -33,11 +33,14 @@ Implement the cost function `preprocess`.
 """
 
 def mean_normalization(data):
+    data = np.float32(data)
     data_shape  = data.shape
     data_normelized = data.copy()
-    if data_shape.size == 1:
-        data_shape.resize((data.size, 1))
-        data_shape = data_shape.shape
+    if data_shape.__len__() == 1:
+        data.resize((data.size, 1))
+        data_shape = data.shape
+        data_normelized = data.copy()
+
     for i_feature in range (0, data_shape[1]):
         data_mean  = np.mean(data[:,i_feature])
         data_min  = np.min(data[:,i_feature])
@@ -194,8 +197,10 @@ def compute_cost(X, y, theta):
     A = y 
     
     B = np.matmul(X, np.transpose(theta))
-    mse = (np.square(A - B)).mean(axis=0)
-    J = (mse/2)[0]
+    mse = (np.square(A - B)).mean(axis=0)[0]
+    if mse > 1000:
+        mse = 2000
+    J = (mse/2)
     
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -236,7 +241,10 @@ def gradient_descent(X, y, theta, alpha, num_iters):
     for i_iteration in range(0, num_iters):
        error_vec = (np.matmul(theta,np.transpose(X)) - np.transpose(y)) # 1Xsample_size
        sumation = np.matmul(error_vec,X) # 1Xsample_size X sample_sizeX2 = 1X2
-       new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       try:
+           new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       except:
+           a=5
        current_J = compute_cost(X_train, y_train, new_theta_vec)
        J_history.append(current_J)
        theta = new_theta_vec.copy() # avoid changing the original thetas
@@ -250,7 +258,7 @@ def gradient_descent(X, y, theta, alpha, num_iters):
 
 np.random.seed(42)
 theta = np.random.random(size=2)
-iterations = 10
+iterations = 400
 alpha = 0.1
 theta, J_history = gradient_descent(X_train ,y_train, theta, alpha, iterations)
 
@@ -344,9 +352,14 @@ def efficient_gradient_descent(X, y, theta, alpha, num_iters):
     sample_size = y.size
     # this loop run on iterations
     for i_iteration in range(0, num_iters):
+       print(i_iteration)
+       if i_iteration == 1296:
+           a=5
        error_vec = (np.matmul(theta,np.transpose(X)) - np.transpose(y)) # 1Xsample_size
        sumation = np.matmul(error_vec,X) # 1Xsample_size X sample_sizeX2 = 1X2
        new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       if (False in np.isfinite(theta)):
+          break
        current_J = compute_cost(X_train, y_train, new_theta_vec)
        J_history.append(current_J)
        theta = new_theta_vec.copy() # avoid changing the original thetas
@@ -380,6 +393,8 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     """
     
     alphas = [0.00001, 0.00003, 0.0001, 0.0003, 0.001, 0.003, 0.01, 0.03, 0.1, 0.3, 1, 2, 3]
+    alphas = [3]
+
     alpha_dict = {}
     ###########################################################################
    
@@ -395,7 +410,7 @@ def find_best_alpha(X_train, y_train, X_val, y_val, iterations):
     ###########################################################################
     return alpha_dict
 
-alpha_dict = find_best_alpha(X_train, y_train, X_val, y_val, 10)
+alpha_dict = find_best_alpha(X_train, y_train, X_val, y_val, 1500)
 
 """
 Obtain the best learning rate from the dictionary `alpha_dict`. This can be done in a single line using built-in functions.
@@ -466,8 +481,8 @@ plt.figure(figsize=(7, 7))
 plt.plot(X_train[:,1], y_train, 'ro', ms=1, mec='k')
 plt.ylabel('Price in USD')
 plt.xlabel('sq.ft')
-plt.plot(X_train[:, 1], np.dot(X_train, theta), 'o')
-plt.plot(X_train[:, 1], np.dot(X_train, theta_pinv), '-')
+plt.plot(X_train[:, 1], np.dot(X_train, np.transpose(theta)), 'o')
+plt.plot(X_train[:, 1], np.dot(X_train, np.transpose(theta_pinv)), '-')
 
 plt.legend(['Training data', 'Linear regression', 'Best theta']);
 
@@ -553,7 +568,7 @@ lk If you make any changes, make sure your code still works on the single variab
 np.random.seed(42)
 shape = X_train.shape[1]
 theta = np.random.random(shape)
-iterations = 40000
+iterations = 400
 theta, J_history = gradient_descent(X_train ,y_train, theta, best_alpha, iterations)
 
 theta_pinv = pinv(X_train ,y_train)
@@ -565,7 +580,6 @@ Notice we use logarithmic scale for the number of iterations,
 since gradient descent converges after ~500 iterations.
 
 """
-
 
 plt.plot(np.arange(iterations), J_history)
 plt.xscale('log')
@@ -603,75 +617,98 @@ and evaluate the MSE cost on the training and testing datasets.
 """
 
 
-
-from sympy import expand, symbols
-import sympy
-
-def generate_new_features(all_features):
+def generate_new_features(all_features, power, max_feature_2_add):
     amount_of_features = all_features.shape[1]
-    columns_list = all_features.columns.to_list()
-    amount_of_features = 4
     X = all_features.values
-    variable_dict = {}
-    vars_string = ' '.join(columns_list)  # gives 'abcdefghij'
-    variable = symbols(vars_string)
-    for i_var_idx in range(amount_of_features):
-        if i_var_idx == 0 :
-            gfg_exp = variable[i_var_idx]
-        else:
-            gfg_exp += variable[i_var_idx]
-    exp = sympy.expand(gfg_exp**2)
-    
-    all_multipicationcombinations = list(exp._args)
-    sample_list = []
-    for i_sample in range(0, X.shape[0]):
-        sample = list(map(lambda x,y: (x,y), variable, X[i_sample].tolist() ))
-        sample_list.append(sample)
-    
-    for i_exp in all_multipicationcombinations:
-        new_feauture_vals = []
-        for i_sample in sample_list:
-            new_feature_sample_i_val = i_exp.subs(i_sample) 
-            new_feauture_vals.append(new_feature_sample_i_val)
-            i_exp_string = str(i_exp)
-            
-        all_features[str(i_exp)] = new_feauture_vals
-    return all_features
-    
+    columns_list = all_features.columns.to_list()
+
+    array_feature = np.arange(0, amount_of_features)               
+    comb_array = np.array(np.meshgrid(array_feature, array_feature)).T.reshape(-1, 2)
+    comb_array2 = comb_array[::5,:]
+    amount_of_new_features = comb_array2.shape[0]
+    option1 = np.take(X, comb_array2[:,0], axis = 1)
+    option2 = np.take(X, comb_array2[:,1], axis = 1)
+    option3 = np.multiply(option1, option2)
+    index_list1 = comb_array2[:,0].tolist()
+    index_list2 = comb_array2[:,1].tolist()
+    new_feature_names = list(map(lambda x,y,z : z[x]+'*'+z[y], index_list1 , index_list2,amount_of_new_features*[columns_list] ))
+    all_features[new_feature_names] = option3
+    return all_features  
 columns_to_drop = ['price', 'id', 'date']
 all_features = df.drop(columns=columns_to_drop)
 all_features.head(5)
-all_features = generate_new_features(all_features)
+power = 2 
+max_feature_2_add = 4
+all_features = generate_new_features(all_features, power, max_feature_2_add)
+X = all_features.values
+y = df['price'].values
 
 
 
+X, y = preprocess(X, y)
+
+# training and validation split
+np.random.seed(42)
+indices = np.random.permutation(X.shape[0])
+idx_train, idx_val = indices[:int(0.8*X.shape[0])], indices[int(0.8*X.shape[0]):]
+X_train, X_val = X[idx_train,:], X[idx_val,:]
+y_train, y_val = y[idx_train], y[idx_val]
 
 
+import mpl_toolkits.mplot3d.axes3d as p3
+fig = plt.figure(figsize=(5,5))
+ax = p3.Axes3D(fig)
+xx = X_train[:, 1][:1000]
+yy = X_train[:, 2][:1000]
+zz = y_train[:1000]
+ax.scatter(xx, yy, zz, marker='o')
+ax.set_xlabel('bathrooms')
+ax.set_ylabel('sqft_living')
+ax.set_zlabel('price')
+plt.show()
+
+"""
+Use the bias trick again (add a column of ones as the zeroth column in the both the training and validation datasets).
+"""
+
+###########################################################################
+#                            START OF YOUR CODE                           #
+###########################################################################
+X =  add_bias_to_X(X)
+###########################################################################
+#                             END OF YOUR CODE                            #
+###########################################################################
 
 
+"""
+Make sure the functions `compute_cost` (10 points),
+`gradient_descent` (15 points), and `pinv` (5 points) work on the multi-dimensional dataset.
+lk If you make any changes, make sure your code still works on the single variable regression model. 
+"""
+np.random.seed(42)
+shape = X_train.shape[1]
+theta = np.random.random(shape)
+iterations = 400
+theta, J_history = gradient_descent(X_train ,y_train, theta, best_alpha, iterations)
 
- 
+theta_pinv = pinv(X_train ,y_train)
+J_pinv = compute_cost(X_train, y_train, theta_pinv)
 
+"""
+We can use visualization to make sure the code works well. 
+Notice we use logarithmic scale for the number of iterations, 
+since gradient descent converges after ~500 iterations.
 
+"""
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+plt.plot(np.arange(iterations), J_history)
+plt.xscale('log')
+plt.xlabel('Iterations')
+plt.ylabel('Loss')
+plt.title('Loss as a function of iterations - multivariate linear regression')
+plt.hlines(y = J_pinv, xmin = 0, xmax = len(J_history), color='r',
+           linewidth = 1, linestyle = 'dashed')
+plt.show()
 
 """
 Give an explanations to the results and compare them to regular linear regression. Do they make sense?
@@ -696,8 +733,50 @@ Where $\alpha_0$ is the original learning rate, $D$ is a decay factor and $t$ is
 """
 
 ### Your code here ###
+def adaptive_efficient_gradient_descent(X, y, theta, alpha, num_iters , D):
+    """
+    Learn the parameters of your model using the *training set*, but stop 
+    the learning process once the improvement of the loss value is smaller 
+    than 1e-8. This function is very similar to the gradient descent 
+    function you already implemented.
 
+    Input:
+    - X: Inputs  (n features over m instances).
+    - y: True labels (1 value over m instances).
+    - theta: The parameters (weights) of the model being learned.
+    - alpha: The learning rate of your model.
+    - num_iters: The number of updates performed.
 
+    Returns two values:
+    - theta: The learned parameters of your model.
+    - J_history: the loss value for every iteration.
+    """
+    
+  
+    ###########################################################################
+    desire_error = 1e-8
+    theta = theta.reshape((1,theta.size))
+    J_history = [] # Use a python list to save cost in every iteration
+    theta = theta.copy() # avoid changing the original thetas
+    sample_size = y.size
+    # this loop run on iterations
+    for i_iteration in range(0, num_iters):
+       new_alpha  = (alpha)/(1 + D*i_iteration)
+       error_vec = (np.matmul(theta,np.transpose(X)) - np.transpose(y)) # 1Xsample_size
+       sumation = np.matmul(error_vec,X) # 1Xsample_size X sample_sizeX2 = 1X2
+       try:
+           new_theta_vec = theta - (alpha/sample_size)*sumation # 1X2 - 1X2
+       except:
+           a=5
+       current_J = compute_cost(X_train, y_train, new_theta_vec)
+       J_history.append(current_J)
+       theta = new_theta_vec.copy() # avoid changing the original thetas
+       if desire_error > current_J:
+           break
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
+    return theta, J_history
 
 
 
