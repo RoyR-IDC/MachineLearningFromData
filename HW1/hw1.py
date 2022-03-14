@@ -573,7 +573,7 @@ theta, J_history = gradient_descent(X_train ,y_train, theta, best_alpha, iterati
 
 theta_pinv = pinv(X_train ,y_train)
 J_pinv = compute_cost(X_train, y_train, theta_pinv)
-
+np.linalg.pinv(X_train)
 """
 We can use visualization to make sure the code works well. 
 Notice we use logarithmic scale for the number of iterations, 
@@ -624,7 +624,7 @@ def generate_new_features(all_features, power, max_feature_2_add):
 
     array_feature = np.arange(0, amount_of_features)               
     comb_array = np.array(np.meshgrid(array_feature, array_feature)).T.reshape(-1, 2)
-    comb_array2 = comb_array
+    comb_array2 = comb_array[::10]
     amount_of_new_features = comb_array2.shape[0]
     option1 = np.take(X, comb_array2[:,0], axis = 1)
     option2 = np.take(X, comb_array2[:,1], axis = 1)
