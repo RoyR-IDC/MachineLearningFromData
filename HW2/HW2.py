@@ -31,13 +31,26 @@ n.children
 
 # load dataset
 path  = r'C:\MSC\ML\hw\HW2\agaricus-lepiota.csv'
-data = pd.read_csv('agaricus-lepiota.csv')
+data = pd.read_csv(path)
+columns_list = data.columns.to_list()
+# normerization 
+data = data.applymap(lambda x: ord(x))
+data.columns = columns_list
+"""
 
+"""
 
 #############################################################################
 # TODO: Find columns with missing values and remove them from the data.#
 #############################################################################
-pass
+columns_with_empty_value_list = data.columns[data.isna().any()].tolist()
+if columns_with_empty_value_list.__len__():
+    remove_columns_string = ', '.join(columns_with_empty_value_list)
+    print('The following columns [' + remove_columns_string +  \
+          '] have missing values in data, and therefore removed')
+    data = data.drop(columns_with_empty_value_list)
+else:
+    print('There is no missing values, and therefore no columns has been removed')
 #############################################################################
 #                             END OF YOUR CODE                              #
 #############################################################################
@@ -50,6 +63,8 @@ from sklearn.model_selection import train_test_split
 # Making sure the last column will hold the labels
 X, y = data.drop('class', axis=1), data['class']
 X = np.column_stack([X,y])
+
+
 # split dataset using random_state to get the same split each time
 X_train, X_test = train_test_split(X, random_state=99)
 
@@ -70,7 +85,16 @@ def calc_gini(data):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    if isinstance(data, pd.DataFrame):
+        data_array = data.to_numpy()
+    else:
+        data_array = data
+   
+    x = np.asarray(data_array)
+    sorted_x = np.sort(x)
+    n = len(x)
+    cumx = np.cumsum(sorted_x, dtype=float)
+    gini =  (n + 1 - 2 * np.sum(cumx) / cumx[-1]) / n
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -90,16 +114,73 @@ def calc_entropy(data):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+    if isinstance(data, pd.DataFrame):
+        data_array = data.to_numpy()
+    else:
+        data_array = data
+    pA = data_array / data_array.sum()
+    entropy = -np.sum(pA*np.log2(pA))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
     return entropy
 
 ##### Your Tests Here #####
-calc_gini(X), calc_entropy(X)
+calc_gini(X)
+calc_entropy(X)
 
 
+def info_gain(data, feature, impurity_func):
+    
+    impurity_before_changing  = impurity_func(data)
+    data_feature = data[feature]
+    amount_of_values = data_feature.shape[0]
+    
+    # 
+    data_feaure_count = data_feature.value_counts()
+    data_feaure_values = data_feaure_count.index.to_list()
+    data_feaure_values.sort()
+    sepration_dict = {}
+    for i_value in range(0 , data_feaure_values.__len__()-1):
+        split_values =  data_feaure_values[i_value:i_value+2]  
+        split_value   = np.mean(split_values)
+        if split_value in split_values:
+            continue
+        else:
+            data_feaure_values_array = np.array(data_feaure_values)
+            larger_index = (data_feaure_values_array >= split_value)
+            larger_array = data_feaure_values_array[larger_index]
+            smaller_array = data_feaure_values_array[~larger_index]
+
+            amount_of_features = data_feaure_values_array.size  
+            amount_smaller = smaller_array.size
+            amount_larger = larger_array.size
+            
+            larger_value = (amount_larger/amount_of_features)*impurity_func(larger_array)
+            smaller_value = (amount_smaller/amount_of_features)*impurity_func(smaller_array)
+            goodness_of_threshould = (1 - larger_value - smaller_value)
+            sepration_dict[split_value] = goodness_of_threshould 
+            
+    dict_is_empty = not bool(sepration_dict)
+    if dict_is_empty:
+        info_gain = 0 #####
+    else:
+        dict_values = sepration_dict.items()
+        dict_values = list(dict_values)
+        dict_values = np.array(dict_values)
+        best_th_index  = np.where(dict_values[:,1] == np.max(dict_values[:,1]))[0][0]
+        th_value  = dict_values[best_th_index,0]
+        
+        
+    return info_gain
+
+info_gain(data, 'odor', calc_entropy)
+"""
+from scipy.stats import entropy
+entropy([1/2, 1/2], base=2)
+
+
+"""
 """
 ## Goodness of Split
 
@@ -112,7 +193,15 @@ $$
 NOTE: you can add more parameters to the function and you can also add more 
 returning variables (The given parameters and the given returning variable should not be touch). (10 Points)
 """
-def goodness_of_split(data, feature, impurity_func):
+def info_gain(data, feature, impurity_func):
+    
+    impurity_before_changing  = impurity_func(data)
+    data_feature = data[feature]
+    amount_of_values = data_feature.shape[0]
+    data_feaure_count = data_feature.value_counts()
+    
+    return info_gain
+def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
     """
     Calculate the goodness of split of a dataset given a feature and impurity function.
 
@@ -120,20 +209,24 @@ def goodness_of_split(data, feature, impurity_func):
     - data: any dataset where the last column holds the labels.
     - feature: the feature index.
     - impurity func: a function that calculates the impurity.
+    - gain_ratio: goodness of split or gain ratio flag.
 
-    Returns the goodness of split.  
+    Returns the goodness of split (or the Gain Ration).  
     """
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    pass
+
+    ###########################################################################
     goodness = 0
+    feature_data = data[feature].to_numpy()
+    if gain_ratio: # Gain ratio
+        goodness  = impurity_func(feature_data)
+    else: # Goodness of split
+        goodness = 0    
+    #                   END OF YOUR CODE                            #
     ###########################################################################
-    #                             END OF YOUR CODE                            #
-    ###########################################################################
-    return goodness    
-
-
+    return goodness 
 
 """
 ## Building a Decision Tree
