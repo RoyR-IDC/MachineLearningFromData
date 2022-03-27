@@ -42,16 +42,16 @@ header = columns_list
 
 # Column labels.
 # These are used only to print the tree.
-def unique_vals(rows, col):
+def unique_vals(datas, col):
     """Find the unique values for a column in a dataset."""
-    return set([row[col] for row in rows])
+    return set([data[col] for data in datas])
 
-def class_counts(rows):
+def class_counts(datas):
     """Counts the number of each type of example in a dataset."""
     counts = {}  # a dictionary of label -> count.
-    for row in rows:
+    for data in datas:
         # in our dataset format, the label is always the last column
-        label = row[-1]
+        label = data[-1]
         if label not in counts:
             counts[label] = 0
         counts[label] += 1
@@ -95,19 +95,19 @@ class Question:
         #return string2return
         return string2return
 
-def partition(rows, question):
+def partition(datas, question):
     """Partitions a dataset.
 
-    For each row in the dataset, check if it matches the question. If
-    so, add it to 'true rows', otherwise, add it to 'false rows'.
+    For each data in the dataset, check if it matches the question. If
+    so, add it to 'true datas', otherwise, add it to 'false datas'.
     """
-    true_rows, false_rows = [], []
-    for row in rows:
-        if question.match(row):
-            true_rows.append(row)
+    true_datas, false_datas = [], []
+    for data in datas:
+        if question.match(data):
+            true_datas.append(data)
         else:
-            false_rows.append(row)
-    return true_rows, false_rows
+            false_datas.append(data)
+    return true_datas, false_datas
 def calc_gini(data):
     """
     Calculate gini impurity measure of a dataset.
@@ -120,7 +120,7 @@ def calc_gini(data):
     ###########################################################################
     # TODO: Implement the function.                                           #
     ###########################################################################
-    """Calculate the Gini Impurity for a list of rows.
+    """Calculate the Gini Impurity for a list of datas.
 
     There are a few different ways to do this, I thought this one was
     the most concise. See:
@@ -169,20 +169,20 @@ def info_gain(left, right, current_uncertainty):
     p = float(len(left)) / (len(left) + len(right))
     return current_uncertainty - p * calc_gini(left) - (1 - p) * calc_gini(right)
 
-def find_best_split(rows, impurity):
+def find_best_split(datas, impurity):
     """Find the best question to ask by iterating over every feature / value
     and calculating the information impurity_gain."""
     best_gain = 0  # keep track of the best information impurity_gain
     best_question = None  # keep train of the feature / value that produced it
     best_feature_name = ''
-    current_uncertainty = impurity(rows)
+    current_uncertainty = impurity(datas)
 
 
-    n_features = len(rows[0]) - 1  # number of columns
+    n_features = len(datas[0]) - 1  # number of columns
 
     for col in range(n_features):  # for each feature
 
-        values = set([row[col] for row in rows])  # unique values in the column
+        values = set([data[col] for data in datas])  # unique values in the column
 
         for val in values:  # for each value
             question = Question(col, val)
@@ -190,15 +190,15 @@ def find_best_split(rows, impurity):
            
 
             # try splitting the dataset
-            true_rows, false_rows = partition(rows, question)
+            true_datas, false_datas = partition(datas, question)
 
             # Skip this split if it doesn't divide the
             # dataset.
-            if len(true_rows) == 0 or len(false_rows) == 0:
+            if len(true_datas) == 0 or len(false_datas) == 0:
                 continue
 
             # Calculate the information impurity_gain from this split
-            impurity_gain = info_gain(true_rows, false_rows, current_uncertainty)
+            impurity_gain = info_gain(true_datas, false_datas, current_uncertainty)
 
             # You actually can use '>' instead of '>=' here
             # but I wanted the tree to look a certain way for our
@@ -242,7 +242,7 @@ class DecisionNode:
 def build_tree(data, impurity, gain_ratio=False, min_samples_split=1, max_depth=1000):
     """
     Build a tree using the given impurity measure and training dataset. 
-    You are required to fully grow the tree until all leaves are pure. 
+    You are required to fully gdata the tree until all leaves are pure. 
 
     Input:
     - data: the training dataset.
@@ -270,13 +270,13 @@ def build_tree(data, impurity, gain_ratio=False, min_samples_split=1, max_depth=
 
     # If we reach here, we have found a useful feature / value
     # to partition on.
-    true_rows, false_rows = partition(data, question)
+    true_datas, false_datas = partition(data, question)
 
     # Recursively build the true branch.
-    true_branch = build_tree(true_rows, impurity, gain_ratio, min_samples_split, max_depth)
+    true_branch = build_tree(true_datas, impurity, gain_ratio, min_samples_split, max_depth)
 
     # Recursively build the false branch.
-    false_branch = build_tree(false_rows, impurity, gain_ratio, min_samples_split, max_depth)
+    false_branch = build_tree(false_datas, impurity, gain_ratio, min_samples_split, max_depth)
 
     # Return a Question node.
     # This records the best feature / value to ask at this point,
@@ -314,7 +314,7 @@ def print_tree(node, spacing=""):
 
 print_tree(gini_tree)
 
-def classify(row, node):
+def classify(data, node):
     """See the 'rules of recursion' above."""
 
     # Base case: we've reached a Node
@@ -324,13 +324,13 @@ def classify(row, node):
     # Decide whether to follow the true-branch or the false-branch.
     # Compare the feature / value stored in the node,
     # to the example we're considering.
-    if node.question.match(row):
-        return classify(row, node.true_branch)
+    if node.question.match(data):
+        return classify(data, node.true_branch)
     else:
-        return classify(row, node.false_branch)
+        return classify(data, node.false_branch)
 #######
 # # Demo:
-# # The tree predicts the 1st row of our
+# # The tree predicts the 1st data of our
 # # training data is an apple with confidence 1.
 # classify(training_data[0], my_tree)
 # #######
@@ -359,9 +359,9 @@ def print_Node(counts):
 #     ['Red', 1, 'Grape'],
 #     ['Yellow', 3, 'Lemon'],
 # ]
-# for row in testing_data:
+# for data in testing_data:
 #     print ("Actual: %s. Predicted: %s" %
-#            (row[-1], print_Node(classify(row, my_tree))))
+#            (data[-1], print_Node(classify(data, my_tree))))
 ##########################################################
 
 
@@ -575,7 +575,7 @@ def predict(node, instance):
 
     Input:
     - root: the root of the decision tree.
-    - instance: an row vector from the dataset. Note that the last element
+    - instance: an data vector from the dataset. Note that the last element
                 of this vector is the label of the instance.
 
     Output: the prediction of the instance.
@@ -633,7 +633,7 @@ tree use the same impurity function and same gain_ratio flag).
 
 Consider the following max_depth values: [1, 2, 3, 4, 5, 6, 7, 8]. 
 For each value, construct a tree and prune it 
-according to the max_depth value = don't let the tree to grow
+according to the max_depth value = don't let the tree to gdata
  beyond this depth. Next, calculate the training and testing accuracy.<br>
 On a single plot, draw the training and testing accuracy as a function 
 of the max_depth. Mark the best result on the graph with red circle.
