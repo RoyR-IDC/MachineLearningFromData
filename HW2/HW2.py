@@ -167,7 +167,9 @@ def info_gain(left, right, current_uncertainty):
     two child nodes.
     """
     p = float(len(left)) / (len(left) + len(right))
-    return current_uncertainty - p * calc_gini(left) - (1 - p) * calc_gini(right)
+    info_gain = (current_uncertainty - p * calc_gini(left) - (1 - p) * calc_gini(right))
+    split_information_rate = -np.log2(p)*np.log2(1-p)
+    return info_gain, split_information_rate
 
 def find_best_split(datas, impurity):
     """Find the best question to ask by iterating over every feature / value
@@ -175,6 +177,7 @@ def find_best_split(datas, impurity):
     best_gain = 0  # keep track of the best information impurity_gain
     best_question = None  # keep train of the feature / value that produced it
     best_feature_name = ''
+    best_split_information_rate = 0
     current_uncertainty = impurity(datas)
 
 
@@ -198,15 +201,15 @@ def find_best_split(datas, impurity):
                 continue
 
             # Calculate the information impurity_gain from this split
-            impurity_gain = info_gain(true_datas, false_datas, current_uncertainty)
+            impurity_gain, split_information_rate = info_gain(true_datas, false_datas, current_uncertainty)
 
             # You actually can use '>' instead of '>=' here
             # but I wanted the tree to look a certain way for our
             # toy dataset.
             if impurity_gain >= best_gain:
-                best_gain, best_question, best_feature_name = impurity_gain, question, feature_name
+                best_gain, best_question, best_feature_name, best_split_information_rate = impurity_gain, question, feature_name, split_information_rate
 
-    return best_gain, best_question, best_feature_name
+    return best_gain, best_question, best_feature_name, best_split_information_rate
 
 
 class Node(object):
@@ -260,7 +263,7 @@ def build_tree(data, impurity, gain_ratio=False, min_samples_split=1, max_depth=
     # Try partitioing the dataset on each of the unique attribute,
     # calculate the information impurity_gain,
     # and return the question that produces the highest impurity_gain.
-    impurity_gain, question , feature_name  = find_best_split(data, impurity)
+    impurity_gain, question , feature_name, split_information_rate  = find_best_split(data, impurity)
 
     # Base case: no further info impurity_gain
     # Since we can ask no further questions,
@@ -341,28 +344,6 @@ def print_Node(counts):
     for lbl in counts.keys():
         probs[lbl] = str(int(counts[lbl] / total * 100)) + "%"
     return probs
-# #######
-# # Demo:
-# # Printing that a bit nicer
-# print_Node(classify(training_data[0], my_tree))
-# #######
-# #######
-# # Demo:
-# # On the second example, the confidence is lower
-# print_Node(classify(training_data[1], my_tree))
-# #######
-# # Evaluate
-# testing_data = [
-#     ['Green', 3, 'Apple'],
-#     ['Yellow', 4, 'Apple'],
-#     ['Red', 2, 'Grape'],
-#     ['Red', 1, 'Grape'],
-#     ['Yellow', 3, 'Lemon'],
-# ]
-# for data in testing_data:
-#     print ("Actual: %s. Predicted: %s" %
-#            (data[-1], print_Node(classify(data, my_tree))))
-##########################################################
 
 
 
@@ -482,24 +463,6 @@ def generate_split_information_rate(separation_dict_L_S, th_value):
 
 
 
-"""
-from scipy.stats import entropy
-entropy([1/2, 1/2], base=2)
-
-
-"""
-"""
-## Goodness of Split
-
-Given a feature the Goodnees of Split measures the reduction in the impurity 
-if we split the data according to the feature.
-$$
-\Delta\varphi(S, A) = \varphi(S) - \sum_{v\in Values(A)} \frac{|S_v|}{|S|}\varphi(S_v)
-$$
-
-NOTE: you can add more parameters to the function and you can also add more 
-returning variables (The given parameters and the given returning variable should not be touch). (10 Points)
-"""
 
 
 def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
@@ -520,12 +483,12 @@ def goodness_of_split(data, feature, impurity_func, gain_ratio=False):
 
     ###########################################################################
     goodness = 0
-    info_gain, separation_dict, separation_dict_L_S, th_value, split_flag = gen_info_gain(data, feature, calc_entropy)
+    impurity_gain, question , feature_name, split_information_rate  = find_best_split(data, impurity_func)
+
     if gain_ratio:  # Gain ratio
-        split_information = generate_split_information_rate(separation_dict_L_S, th_value)
-        goodness = (info_gain / split_information)
+        goodness = (impurity_gain / split_information_rate)
     else:  # Goodness of split
-        goodness = info_gain
+        goodness = impurity_gain
     #                   END OF YOUR CODE                            #
     ###########################################################################
     return goodness
