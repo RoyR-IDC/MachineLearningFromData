@@ -29,15 +29,16 @@ data = pd.read_csv(path)
 columns_list =  data.columns.to_list()
 
 # normerization
-data = data.applymap(lambda x: ord(x))
+#data = data.applymap(lambda x: ord(x))
+data_df = data
+
 data.columns = columns_list
 
 
-data = data[0:100]
-
+data = data[0:300]
+data = data.to_numpy()
 #####################################################3
 
-data = data.to_numpy().tolist()
 header = columns_list
 
 # Column labels.
@@ -317,20 +318,7 @@ def print_tree(node, spacing=""):
 
 print_tree(gini_tree)
 
-def classify(data, node):
-    """See the 'rules of recursion' above."""
 
-    # Base case: we've reached a Node
-    if isinstance(node, Node):
-        return node.predictions
-
-    # Decide whether to follow the true-branch or the false-branch.
-    # Compare the feature / value stored in the node,
-    # to the example we're considering.
-    if node.question.match(data):
-        return classify(data, node.true_branch)
-    else:
-        return classify(data, node.false_branch)
 #######
 # # Demo:
 # # The tree predicts the 1st data of our
@@ -345,7 +333,96 @@ def print_Node(counts):
         probs[lbl] = str(int(counts[lbl] / total * 100)) + "%"
     return probs
 
+def predict(node, instance):
+    """
+    Predict a given instance using the decision tree
+ 
+    Input:
+    - root: the root of the decision tree.
+    - instance: an row vector from the dataset. Note that the last element 
+                of this vector is the label of the instance.
+ 
+    Output: the prediction of the instance.
+    """
+    pred = None
+    ###########################################################################
+    # TODO: Implement the function.                                           #
+    ###########################################################################
+    # Base case: we've reached a leaf
+    if isinstance(node, Node):
+        dict_values = node.predictions.items()
+        
+        dict_values = list(dict_values)
+        dict_values = np.array(dict_values)
+        if is_numeric(dict_values[:,1]):
+            max_indexs = np.where(dict_values[:,1] == np.max(dict_values[:,1]))[0]
+        else:
+            prediection_values = np.float32(dict_values[:,1])
+            max_indexs = np.where(prediection_values == np.max(prediection_values))[0]
 
+        if max_indexs.size >1:
+            max_indexs = np.random.choice(max_indexs, 1)
+        prediction = dict_values[max_indexs[0],0]
+        return prediction
+
+    # Decide whether to follow the true-branch or the false-branch.
+    # Compare the feature / value stored in the node,
+    # to the example we're considering.
+    if node.question.match(instance):
+        return predict(node.true_branch, instance)
+    else:
+        return predict(node.false_branch, instance)
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
+
+
+
+
+
+a=predict(gini_tree, data[5])  
+    
+def print_leaf(counts):
+    """A nicer way to print the predictions at a leaf."""
+    total = sum(counts.values()) * 1.0
+    probs = {}
+    for lbl in counts.keys():
+        probs[lbl] = str(int(counts[lbl] / total * 100)) + "%"
+    return probs   
+print_leaf(predict(gini_tree, data[0]))
+
+
+def calc_accuracy(node, dataset):
+    """
+    Predict a given dataset using the decision tree
+ 
+    Input:
+    - node: a node in the decision tree.
+    - dataset: the dataset on which the accuracy is evaluated
+ 
+    Output: the accuracy of the decision tree on the given dataset (%).
+    """
+    accuracy = 0
+    ###########################################################################
+    # TODO: Implement the function.                                           #
+    ###########################################################################
+    error_sum = 0
+    for i_row in dataset:
+        y_pred = predict(gini_tree, i_row)  
+        y_true = i_row[-1]
+        if np.logical_xor(y_true, y_pred):
+            add_error = 1
+        else:
+            add_error = 0
+        error_sum += add_error
+    error_loss = (1/dataset.shape[1])*error_sum
+    accuracy = (1-error_loss)
+    ###########################################################################
+    #                             END OF YOUR CODE                            #
+    ###########################################################################
+    return accuracy 
+
+calc_accuracy(gini_tree, data)
 
 #############################################################################
 # TODO: Find columns with missing values and remove them from the data.#
@@ -366,6 +443,8 @@ else:
 """
 We will split the dataset to `Training` and `Testing` datasets.
 """
+
+
 from sklearn.model_selection import train_test_split
 
 # Making sure the last column will hold the labels
@@ -379,10 +458,6 @@ print("Training dataset shape: ", X_train.shape)
 print("Testing dataset shape: ", X_test.shape)
 
 print(y.shape)
-
-
-
-
 
 ##### Your Tests Here #####
 calc_gini(X)
