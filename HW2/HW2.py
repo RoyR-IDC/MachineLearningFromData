@@ -238,7 +238,7 @@ else:
 
 
 # normerization
-do_nomerzation = True
+do_nomerzation = False
 if do_nomerzation:
     data = data.applymap(lambda x: ord(x))
 data.columns = columns_list
@@ -525,7 +525,7 @@ def calc_accuracy(node, dataset):
     for i_row in dataset:
         y_pred = predict(node, i_row)  
         y_true = i_row[-1]
-        if np.logical_xor(y_true, y_pred):
+        if y_true != y_pred:
             add_error = 1
         else:
             add_error = 0
@@ -578,21 +578,26 @@ def print_tree(node, depth=0, parent_feature='ROOT', feature_val='ROOT'):
     ###########################################################################
     """World's most elegant tree printing function."""
     spacing = ""
+    left =  "["
+    right = "]"
+    
     # Base case: we've reached a Node
     if isinstance(node, Node):
-        print (spacing + "Predict", node.predictions)
+        # print (spacing + "Predict", node.predictions)
+        print(feature_val+left + parent_feature + ', leaf'   + right + ':  [' + str(node.predictions) +right)
+
         return
 
     # Print the question at this node
-    print (spacing + str(node.question))
-
+    print(feature_val+ left + parent_feature + ', feature='  +  str(node.feature) + right)
+    feature_val += '  '
     # Call this function recursively on the true branch
-    print (spacing + '--> True:')
-    print_tree(node.true_branch, spacing + "  ")
+    #print (feature_val + '--> True:')
+    print_tree(node.true_branch, parent_feature = node.feature , feature_val = feature_val)
 
     # Call this function recursively on the false branch
-    print (spacing + '--> False:')
-    print_tree(node.false_branch, spacing + "  ")
+    #print (feature_val + '--> False:')
+    print_tree(node.false_branch, parent_feature = node.feature , feature_val = feature_val )
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -600,3 +605,4 @@ def print_tree(node, depth=0, parent_feature='ROOT', feature_val='ROOT'):
     
     
     
+print_tree(tree_entropy, depth=0, parent_feature='ROOT', feature_val='')
